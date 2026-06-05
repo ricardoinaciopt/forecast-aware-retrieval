@@ -1,0 +1,2 @@
+task,split,n_queries,n_queries_with_positive_qrels,qrels_rows,mean_positive_qrels_per_query,median_positive_qrels_per_query,min_positive_qrels_per_query,max_positive_qrels_per_query,mean_relevance,relevance_1_rows,relevance_2_rows,relevance_3_rows,relevance_4_rows
+task2_L12,test,151,151,37565,248.7748344370861,243.0,235,289,2.717742579528817,3288,9551,19202,5524

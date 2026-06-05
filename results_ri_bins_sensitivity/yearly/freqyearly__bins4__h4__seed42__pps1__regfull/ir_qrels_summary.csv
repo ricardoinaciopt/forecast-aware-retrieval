@@ -1,0 +1,5 @@
+task,split,n_queries,n_queries_with_positive_qrels,qrels_rows,mean_positive_qrels_per_query,median_positive_qrels_per_query,min_positive_qrels_per_query,max_positive_qrels_per_query,mean_relevance,relevance_1_rows,relevance_2_rows,relevance_3_rows,relevance_4_rows
+task1,test,129,129,13964,108.24806201550388,108.0,98,122,2.474362646806073,1472,5693,5502,1297
+task2,test,129,129,13869,107.51162790697674,106.0,98,121,2.440911385103468,1393,6104,5236,1136
+task2_L12,test,129,129,13783,106.84496124031008,106.0,99,120,2.4110861205833274,1298,6486,5034,965
+task2_L36,test,129,129,14078,109.13178294573643,109.0,98,128,2.4980110811194773,1600,5352,5641,1485

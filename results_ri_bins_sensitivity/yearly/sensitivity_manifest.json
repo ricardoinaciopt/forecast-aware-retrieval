@@ -1,0 +1,33 @@
+{
+  "generated_at_utc": "2026-06-02T10:10:55.058853+00:00",
+  "input": "M3_Yearly_full.csv",
+  "output_dir": "results_ri_bins_sensitivity/yearly",
+  "frequency": "yearly",
+  "seasonal_period": 1,
+  "forecast_h_grid": [
+    2,
+    4,
+    6
+  ],
+  "qrels_n_bins_grid": [
+    2,
+    3,
+    4
+  ],
+  "seeds": [
+    42
+  ],
+  "patterns_per_series_grid": [
+    1
+  ],
+  "regime_definitions": [
+    "full"
+  ],
+  "pattern_len": 24,
+  "pattern_lens": [
+    12,
+    24,
+    36
+  ],
+  "n_runs": 9
+}

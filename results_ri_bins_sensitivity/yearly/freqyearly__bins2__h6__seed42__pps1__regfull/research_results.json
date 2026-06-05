@@ -1,0 +1,1477 @@
+{
+  "schema_version": 4,
+  "generated_at_utc": "2026-06-02T10:31:49.882609+00:00",
+  "source": {
+    "generator": "pipeline_research",
+    "output_dir": "results_ri_bins_sensitivity/yearly/freqyearly__bins2__h6__seed42__pps1__regfull"
+  },
+  "base_configuration": {
+    "description": "Research-grade retrieval benchmark with four experiments: pattern-only retrieval under late forecasting-regime qrels, whole-series versus pattern retrieval, no-leak retrieval ablation, and pattern-length sensitivity. Relevance judgments are built from 2-bin late-window forecasting regimes. Retrieval systems use only pre-holdout visible histories. IR diagnostics include query-level metrics, qrels density, bootstrap confidence intervals, and paired randomization tests against random ranking.",
+    "parameters": {
+      "input": "M3_Yearly_full.csv",
+      "output_dir": "results_ri_bins_sensitivity/yearly/freqyearly__bins2__h6__seed42__pps1__regfull",
+      "dataset_name": "m3_yearly",
+      "frequency": "yearly",
+      "seed": 42,
+      "seasonal_period": 1,
+      "raw_resample_len": 64,
+      "pattern_len": 24,
+      "pattern_lens": "12,24,36",
+      "patterns_per_series": 1,
+      "tsfel_standardize_series": false,
+      "index_frac": 0.6,
+      "dev_frac": 0.2,
+      "forecast_h": 6,
+      "qrels_top_high": 5,
+      "qrels_top_mid": 15,
+      "qrels_n_bins": 2,
+      "regime_definition": "full",
+      "ml_lags": "1,2,3,4,6,12",
+      "ml_n_estimators": 80,
+      "skip_ml_models": false,
+      "save_rankings": false,
+      "save_dev_artifacts": false,
+      "save_series_meta": false
+    },
+    "forecast_panel": [
+      "AutoETS",
+      "AutoARIMA",
+      "LGBM",
+      "XGB"
+    ],
+    "forecast_panel_note": "Default panel uses two statistical models from StatsForecast (AutoETS, AutoARIMA) and two machine-learning models through MLForecast (LightGBM, XGBoost). Pass --skip-ml-models to use only AutoETS and AutoARIMA.",
+    "retrieval_policy": {
+      "systems": "rank using only information available before each object's held-out late window",
+      "content_baselines": "raw, DTW, TSFEL, and their fusions are computed on pre-holdout visible prefixes"
+    },
+    "qrels_definition": {
+      "profile_window": "late",
+      "type": "forecasting-regime graded qrels",
+      "definition": "full",
+      "n_bins": 2,
+      "regime_fields": [
+        "mean_error_bin",
+        "best_model",
+        "model_disagreement_bin"
+      ],
+      "binning": "quantile bins fitted on the indexed collection and applied to query objects",
+      "retrieval_information": "retrieval systems use only the pre-holdout prefix; qrels use the held-out late window only as evaluation labels",
+      "relevance_4": "same error bin, same best model, and same disagreement bin",
+      "relevance_3": "same error bin and either same best model or same disagreement bin",
+      "relevance_2": "same error bin only",
+      "relevance_1": "adjacent error bin, same best model, and same disagreement bin",
+      "relevance_0": "otherwise"
+    }
+  },
+  "data_summary": {
+    "n_series": 645,
+    "split_counts": {
+      "index": 387,
+      "dev": 129,
+      "test": 129
+    },
+    "series_length": {
+      "min": 20,
+      "median": 25.0,
+      "max": 47
+    }
+  },
+  "experiments": {
+    "exp1_pattern_main": {
+      "question": "Which pattern retrieval systems recover late-window forecasting-regime relevance?",
+      "primary_metric": "ndcg@10",
+      "results": [
+        {
+          "experiment": "exp1_pattern_main",
+          "system": "pattern_tsfel",
+          "n_queries": 129,
+          "p@10": 0.6930232558139535,
+          "ap@10": 0.026990667339639174,
+          "ndcg@10": 0.3564408826049116,
+          "p@15": 0.6837209302325582,
+          "ap@15": 0.03881220496343595,
+          "ndcg@15": 0.3511490156825838
+        },
+        {
+          "experiment": "exp1_pattern_main",
+          "system": "pattern_raw_cosine+pattern_tsfel",
+          "n_queries": 129,
+          "p@10": 0.6837209302325581,
+          "ap@10": 0.026554259306769575,
+          "ndcg@10": 0.3560419336836018,
+          "p@15": 0.6677002583979329,
+          "ap@15": 0.037694805929868416,
+          "ndcg@15": 0.3477077495039148
+        },
+        {
+          "experiment": "exp1_pattern_main",
+          "system": "pattern_raw_dtw",
+          "n_queries": 129,
+          "p@10": 0.6031007751937986,
+          "ap@10": 0.022164781437677947,
+          "ndcg@10": 0.3155157376015612,
+          "p@15": 0.5968992248062015,
+          "ap@15": 0.031149842992638593,
+          "ndcg@15": 0.30397365566520373
+        },
+        {
+          "experiment": "exp1_pattern_main",
+          "system": "pattern_raw_cosine",
+          "n_queries": 129,
+          "p@10": 0.5899224806201551,
+          "ap@10": 0.021270328230982086,
+          "ndcg@10": 0.2999015111990644,
+          "p@15": 0.59328165374677,
+          "ap@15": 0.030518518066166973,
+          "ndcg@15": 0.2980671922819356
+        },
+        {
+          "experiment": "exp1_pattern_main",
+          "system": "random",
+          "n_queries": 129,
+          "p@10": 0.5542635658914727,
+          "ap@10": 0.01854164999057517,
+          "ndcg@10": 0.23333561193918934,
+          "p@15": 0.5395348837209302,
+          "ap@15": 0.025487064302101032,
+          "ndcg@15": 0.23288500791106168
+        }
+      ],
+      "plot": null
+    },
+    "exp2_whole_vs_pattern": {
+      "question": "Are local patterns better retrieval objects than complete series under forecasting-regime relevance?",
+      "primary_metric": "ndcg@10",
+      "results": [
+        {
+          "comparison": "cosine",
+          "approach": "whole-series",
+          "system": "raw_cosine",
+          "n_queries": 129,
+          "p@10": 0.6302325581395348,
+          "ap@10": 0.023365783739636936,
+          "ndcg@10": 0.32393587673500734,
+          "p@15": 0.6155038759689923,
+          "ap@15": 0.03289930299590464,
+          "ndcg@15": 0.31595346032843896
+        },
+        {
+          "comparison": "cosine",
+          "approach": "pattern",
+          "system": "pattern_raw_cosine",
+          "n_queries": 129,
+          "p@10": 0.5899224806201551,
+          "ap@10": 0.021270328230982086,
+          "ndcg@10": 0.2999015111990644,
+          "p@15": 0.59328165374677,
+          "ap@15": 0.030518518066166973,
+          "ndcg@15": 0.2980671922819356
+        },
+        {
+          "comparison": "dtw",
+          "approach": "whole-series",
+          "system": "raw_dtw",
+          "n_queries": 129,
+          "p@10": 0.6255813953488372,
+          "ap@10": 0.02362275206608533,
+          "ndcg@10": 0.3300999136858299,
+          "p@15": 0.6129198966408268,
+          "ap@15": 0.03316909255648858,
+          "ndcg@15": 0.31984014987331927
+        },
+        {
+          "comparison": "dtw",
+          "approach": "pattern",
+          "system": "pattern_raw_dtw",
+          "n_queries": 129,
+          "p@10": 0.6031007751937986,
+          "ap@10": 0.022164781437677947,
+          "ndcg@10": 0.3155157376015612,
+          "p@15": 0.5968992248062015,
+          "ap@15": 0.031149842992638593,
+          "ndcg@15": 0.30397365566520373
+        },
+        {
+          "comparison": "tsfel",
+          "approach": "whole-series",
+          "system": "tsfel",
+          "n_queries": 129,
+          "p@10": 0.7356589147286822,
+          "ap@10": 0.029861798652514617,
+          "ndcg@10": 0.36779847474367205,
+          "p@15": 0.7209302325581395,
+          "ap@15": 0.04262464708493064,
+          "ndcg@15": 0.36379714202998753
+        },
+        {
+          "comparison": "tsfel",
+          "approach": "pattern",
+          "system": "pattern_tsfel",
+          "n_queries": 129,
+          "p@10": 0.6930232558139535,
+          "ap@10": 0.026990667339639174,
+          "ndcg@10": 0.3564408826049116,
+          "p@15": 0.6837209302325582,
+          "ap@15": 0.03881220496343595,
+          "ndcg@15": 0.3511490156825838
+        }
+      ],
+      "plot": null
+    },
+    "exp3_retrieval_ablation": {
+      "question": "How much late forecast-regime relevance is recovered by random ranking and the best content retrieval baseline?",
+      "primary_metric": "ndcg@10",
+      "anti_circularity": "qrels use late forecast profiles as evaluation labels; all retrieval systems use only pre-holdout information.",
+      "results": [
+        {
+          "approach": "random",
+          "system": "random",
+          "n_queries": 129,
+          "p@10": 0.5542635658914727,
+          "ap@10": 0.01854164999057517,
+          "ndcg@10": 0.23333561193918934,
+          "p@15": 0.5395348837209302,
+          "ap@15": 0.025487064302101032,
+          "ndcg@15": 0.23288500791106168
+        },
+        {
+          "approach": "best_content_baseline",
+          "system": "pattern_tsfel",
+          "n_queries": 129,
+          "p@10": 0.6930232558139535,
+          "ap@10": 0.026990667339639174,
+          "ndcg@10": 0.3564408826049116,
+          "p@15": 0.6837209302325582,
+          "ap@15": 0.03881220496343595,
+          "ndcg@15": 0.3511490156825838
+        }
+      ],
+      "plot": null
+    },
+    "exp4_pattern_length_sensitivity": {
+      "question": "How sensitive are the retrieval conclusions to the chosen subsequence length?",
+      "primary_metric": "ndcg@10",
+      "results": [
+        {
+          "pattern_len": 12,
+          "system": "pattern_tsfel",
+          "n_queries": 129,
+          "p@10": 0.7356589147286822,
+          "ap@10": 0.029063545359520344,
+          "ndcg@10": 0.3704165512359884,
+          "p@15": 0.7229974160206719,
+          "ap@15": 0.04195622129278242,
+          "ndcg@15": 0.3584094990238528
+        },
+        {
+          "pattern_len": 12,
+          "system": "pattern_raw_dtw",
+          "n_queries": 129,
+          "p@10": 0.6147286821705427,
+          "ap@10": 0.021889572892742588,
+          "ndcg@10": 0.28371402566935755,
+          "p@15": 0.6134366925064599,
+          "ap@15": 0.03153931762981944,
+          "ndcg@15": 0.28572260081584644
+        },
+        {
+          "pattern_len": 12,
+          "system": "pattern_raw_cosine",
+          "n_queries": 129,
+          "p@10": 0.5968992248062015,
+          "ap@10": 0.02138681892920192,
+          "ndcg@10": 0.27840228758133606,
+          "p@15": 0.592764857881137,
+          "ap@15": 0.030388711770048055,
+          "ndcg@15": 0.2744189403260261
+        },
+        {
+          "pattern_len": 24,
+          "system": "pattern_tsfel",
+          "n_queries": 129,
+          "p@10": 0.6930232558139535,
+          "ap@10": 0.026990667339639174,
+          "ndcg@10": 0.3564408826049116,
+          "p@15": 0.6837209302325582,
+          "ap@15": 0.03881220496343595,
+          "ndcg@15": 0.3511490156825838
+        },
+        {
+          "pattern_len": 24,
+          "system": "pattern_raw_dtw",
+          "n_queries": 129,
+          "p@10": 0.6031007751937986,
+          "ap@10": 0.022164781437677947,
+          "ndcg@10": 0.3155157376015612,
+          "p@15": 0.5968992248062015,
+          "ap@15": 0.031149842992638593,
+          "ndcg@15": 0.30397365566520373
+        },
+        {
+          "pattern_len": 24,
+          "system": "pattern_raw_cosine",
+          "n_queries": 129,
+          "p@10": 0.5899224806201551,
+          "ap@10": 0.021270328230982086,
+          "ndcg@10": 0.2999015111990644,
+          "p@15": 0.59328165374677,
+          "ap@15": 0.030518518066166973,
+          "ndcg@15": 0.2980671922819356
+        },
+        {
+          "pattern_len": 36,
+          "system": "pattern_tsfel",
+          "n_queries": 129,
+          "p@10": 0.7186046511627908,
+          "ap@10": 0.02945530834439204,
+          "ndcg@10": 0.38114089062065615,
+          "p@15": 0.7069767441860465,
+          "ap@15": 0.04235668909488946,
+          "ndcg@15": 0.37567070753834003
+        },
+        {
+          "pattern_len": 36,
+          "system": "pattern_raw_cosine",
+          "n_queries": 129,
+          "p@10": 0.6217054263565892,
+          "ap@10": 0.022679907049251907,
+          "ndcg@10": 0.31364440460320236,
+          "p@15": 0.6222222222222222,
+          "ap@15": 0.032910747879996184,
+          "ndcg@15": 0.3171508646578533
+        },
+        {
+          "pattern_len": 36,
+          "system": "pattern_raw_dtw",
+          "n_queries": 129,
+          "p@10": 0.6217054263565891,
+          "ap@10": 0.023102758272084654,
+          "ndcg@10": 0.31278372734617277,
+          "p@15": 0.6222222222222223,
+          "ap@15": 0.033288274143726454,
+          "ndcg@15": 0.31712609805423725
+        }
+      ],
+      "plot": null
+    }
+  },
+  "raw_task_outputs": {
+    "task1_whole_series": {
+      "qrels_rows": {
+        "dev": 27808,
+        "test": 27657
+      },
+      "late_regime_counts": [
+        {
+          "error_regime": "bin_0",
+          "best_model": "AutoARIMA",
+          "disagreement_regime": "bin_0",
+          "n": 65
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "AutoARIMA",
+          "disagreement_regime": "bin_1",
+          "n": 34
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "AutoETS",
+          "disagreement_regime": "bin_0",
+          "n": 66
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "AutoETS",
+          "disagreement_regime": "bin_1",
+          "n": 38
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "LGBM",
+          "disagreement_regime": "bin_0",
+          "n": 35
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "LGBM",
+          "disagreement_regime": "bin_1",
+          "n": 13
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "XGB",
+          "disagreement_regime": "bin_0",
+          "n": 61
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "XGB",
+          "disagreement_regime": "bin_1",
+          "n": 14
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "AutoARIMA",
+          "disagreement_regime": "bin_0",
+          "n": 28
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "AutoARIMA",
+          "disagreement_regime": "bin_1",
+          "n": 53
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "AutoETS",
+          "disagreement_regime": "bin_0",
+          "n": 25
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "AutoETS",
+          "disagreement_regime": "bin_1",
+          "n": 80
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "LGBM",
+          "disagreement_regime": "bin_0",
+          "n": 18
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "LGBM",
+          "disagreement_regime": "bin_1",
+          "n": 51
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "XGB",
+          "disagreement_regime": "bin_0",
+          "n": 23
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "XGB",
+          "disagreement_regime": "bin_1",
+          "n": 41
+        }
+      ],
+      "fusion": {
+        "system": "raw_dtw+tsfel",
+        "weights": {
+          "raw_dtw": 0.7000000000000001,
+          "tsfel": 0.29999999999999993
+        }
+      },
+      "metrics": {
+        "dev": [
+          {
+            "system": "raw_dtw+tsfel",
+            "n_queries": 129,
+            "p@10": 0.7077519379844962,
+            "ap@10": 0.028028676629466228,
+            "ndcg@10": 0.35294247270279966,
+            "p@15": 0.6775193798449612,
+            "ap@15": 0.03892512333800977,
+            "ndcg@15": 0.337653972261966
+          },
+          {
+            "system": "tsfel",
+            "n_queries": 129,
+            "p@10": 0.7069767441860465,
+            "ap@10": 0.028059946933189542,
+            "ndcg@10": 0.34280737805026473,
+            "p@15": 0.6992248062015503,
+            "ap@15": 0.0401511741068212,
+            "ndcg@15": 0.33886814606434723
+          },
+          {
+            "system": "raw_dtw",
+            "n_queries": 129,
+            "p@10": 0.6186046511627906,
+            "ap@10": 0.022647539649467658,
+            "ndcg@10": 0.3040932883642117,
+            "p@15": 0.6139534883720931,
+            "ap@15": 0.03217501631316776,
+            "ndcg@15": 0.29756742719675916
+          },
+          {
+            "system": "raw_cosine",
+            "n_queries": 129,
+            "p@10": 0.592248062015504,
+            "ap@10": 0.021213896336961236,
+            "ndcg@10": 0.28392762182303627,
+            "p@15": 0.5860465116279069,
+            "ap@15": 0.02997098183440791,
+            "ndcg@15": 0.27891539784970704
+          },
+          {
+            "system": "random",
+            "n_queries": 129,
+            "p@10": 0.5527131782945737,
+            "ap@10": 0.01756268778745952,
+            "ndcg@10": 0.23581866977170926,
+            "p@15": 0.5488372093023257,
+            "ap@15": 0.02489513636240504,
+            "ndcg@15": 0.2328798230135749
+          }
+        ],
+        "test": [
+          {
+            "system": "tsfel",
+            "n_queries": 129,
+            "p@10": 0.7356589147286822,
+            "ap@10": 0.029861798652514617,
+            "ndcg@10": 0.36779847474367205,
+            "p@15": 0.7209302325581395,
+            "ap@15": 0.04262464708493064,
+            "ndcg@15": 0.36379714202998753
+          },
+          {
+            "system": "raw_dtw+tsfel",
+            "n_queries": 129,
+            "p@10": 0.72015503875969,
+            "ap@10": 0.028392155449962795,
+            "ndcg@10": 0.367204526983203,
+            "p@15": 0.704392764857881,
+            "ap@15": 0.04042344259892062,
+            "ndcg@15": 0.3582852554846355
+          },
+          {
+            "system": "raw_dtw",
+            "n_queries": 129,
+            "p@10": 0.6255813953488372,
+            "ap@10": 0.02362275206608533,
+            "ndcg@10": 0.3300999136858299,
+            "p@15": 0.6129198966408268,
+            "ap@15": 0.03316909255648858,
+            "ndcg@15": 0.31984014987331927
+          },
+          {
+            "system": "raw_cosine",
+            "n_queries": 129,
+            "p@10": 0.6302325581395348,
+            "ap@10": 0.023365783739636936,
+            "ndcg@10": 0.32393587673500734,
+            "p@15": 0.6155038759689923,
+            "ap@15": 0.03289930299590464,
+            "ndcg@15": 0.31595346032843896
+          },
+          {
+            "system": "random",
+            "n_queries": 129,
+            "p@10": 0.5465116279069767,
+            "ap@10": 0.017168334859568885,
+            "ndcg@10": 0.23862869803821368,
+            "p@15": 0.5483204134366925,
+            "ap@15": 0.02461240566930705,
+            "ndcg@15": 0.2414666337233759
+          }
+        ]
+      }
+    },
+    "task2_pattern_main": {
+      "length": 24,
+      "pattern_forecast_h": 6,
+      "n_index_patterns": 387,
+      "n_dev_patterns": 129,
+      "n_test_patterns": 129,
+      "qrels_rows": {
+        "dev": 27584,
+        "test": 27441
+      },
+      "late_regime_counts": [
+        {
+          "error_regime": "bin_0",
+          "best_model": "AutoARIMA",
+          "disagreement_regime": "bin_0",
+          "n": 60
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "AutoARIMA",
+          "disagreement_regime": "bin_1",
+          "n": 30
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "AutoETS",
+          "disagreement_regime": "bin_0",
+          "n": 72
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "AutoETS",
+          "disagreement_regime": "bin_1",
+          "n": 29
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "LGBM",
+          "disagreement_regime": "bin_0",
+          "n": 57
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "LGBM",
+          "disagreement_regime": "bin_1",
+          "n": 22
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "XGB",
+          "disagreement_regime": "bin_0",
+          "n": 44
+        },
+        {
+          "error_regime": "bin_0",
+          "best_model": "XGB",
+          "disagreement_regime": "bin_1",
+          "n": 10
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "AutoARIMA",
+          "disagreement_regime": "bin_0",
+          "n": 20
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "AutoARIMA",
+          "disagreement_regime": "bin_1",
+          "n": 62
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "AutoETS",
+          "disagreement_regime": "bin_0",
+          "n": 29
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "AutoETS",
+          "disagreement_regime": "bin_1",
+          "n": 76
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "LGBM",
+          "disagreement_regime": "bin_0",
+          "n": 21
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "LGBM",
+          "disagreement_regime": "bin_1",
+          "n": 50
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "XGB",
+          "disagreement_regime": "bin_0",
+          "n": 16
+        },
+        {
+          "error_regime": "bin_1",
+          "best_model": "XGB",
+          "disagreement_regime": "bin_1",
+          "n": 47
+        }
+      ],
+      "fusion": {
+        "system": "pattern_raw_cosine+pattern_tsfel",
+        "weights": {
+          "pattern_raw_cosine": 0.6000000000000001,
+          "pattern_tsfel": 0.3999999999999999
+        }
+      },
+      "metrics": {
+        "dev": [
+          {
+            "system": "pattern_raw_cosine+pattern_tsfel",
+            "n_queries": 129,
+            "p@10": 0.6620155038759691,
+            "ap@10": 0.025503054538561304,
+            "ndcg@10": 0.3507804250180193,
+            "p@15": 0.6589147286821705,
+            "ap@15": 0.0367552974450229,
+            "ndcg@15": 0.34136873777924603
+          },
+          {
+            "system": "pattern_tsfel",
+            "n_queries": 129,
+            "p@10": 0.6666666666666666,
+            "ap@10": 0.025998728176081263,
+            "ndcg@10": 0.3383944114210469,
+            "p@15": 0.655813953488372,
+            "ap@15": 0.03706120627881205,
+            "ndcg@15": 0.3311023270937016
+          },
+          {
+            "system": "pattern_raw_dtw",
+            "n_queries": 129,
+            "p@10": 0.6085271317829457,
+            "ap@10": 0.021542434444449685,
+            "ndcg@10": 0.30262904252772044,
+            "p@15": 0.6160206718346254,
+            "ap@15": 0.031173318494295315,
+            "ndcg@15": 0.3044409163824066
+          },
+          {
+            "system": "pattern_raw_cosine",
+            "n_queries": 129,
+            "p@10": 0.596124031007752,
+            "ap@10": 0.020197285711552163,
+            "ndcg@10": 0.2818069634223548,
+            "p@15": 0.5943152454780362,
+            "ap@15": 0.029229000918104542,
+            "ndcg@15": 0.2798602813571967
+          },
+          {
+            "system": "random",
+            "n_queries": 129,
+            "p@10": 0.5372093023255814,
+            "ap@10": 0.01690806830353073,
+            "ndcg@10": 0.2243202558195878,
+            "p@15": 0.5410852713178296,
+            "ap@15": 0.024237210902214684,
+            "ndcg@15": 0.23225961605862364
+          }
+        ],
+        "test": [
+          {
+            "system": "pattern_tsfel",
+            "n_queries": 129,
+            "p@10": 0.6930232558139535,
+            "ap@10": 0.026990667339639174,
+            "ndcg@10": 0.3564408826049116,
+            "p@15": 0.6837209302325582,
+            "ap@15": 0.03881220496343595,
+            "ndcg@15": 0.3511490156825838
+          },
+          {
+            "system": "pattern_raw_cosine+pattern_tsfel",
+            "n_queries": 129,
+            "p@10": 0.6837209302325581,
+            "ap@10": 0.026554259306769575,
+            "ndcg@10": 0.3560419336836018,
+            "p@15": 0.6677002583979329,
+            "ap@15": 0.037694805929868416,
+            "ndcg@15": 0.3477077495039148
+          },
+          {
+            "system": "pattern_raw_dtw",
+            "n_queries": 129,
+            "p@10": 0.6031007751937986,
+            "ap@10": 0.022164781437677947,
+            "ndcg@10": 0.3155157376015612,
+            "p@15": 0.5968992248062015,
+            "ap@15": 0.031149842992638593,
+            "ndcg@15": 0.30397365566520373
+          },
+          {
+            "system": "pattern_raw_cosine",
+            "n_queries": 129,
+            "p@10": 0.5899224806201551,
+            "ap@10": 0.021270328230982086,
+            "ndcg@10": 0.2999015111990644,
+            "p@15": 0.59328165374677,
+            "ap@15": 0.030518518066166973,
+            "ndcg@15": 0.2980671922819356
+          },
+          {
+            "system": "random",
+            "n_queries": 129,
+            "p@10": 0.5542635658914727,
+            "ap@10": 0.01854164999057517,
+            "ndcg@10": 0.23333561193918934,
+            "p@15": 0.5395348837209302,
+            "ap@15": 0.025487064302101032,
+            "ndcg@15": 0.23288500791106168
+          }
+        ]
+      }
+    },
+    "pattern_length_runs": [
+      {
+        "length": 12,
+        "pattern_forecast_h": 3,
+        "n_index_patterns": 387,
+        "n_dev_patterns": 129,
+        "n_test_patterns": 129,
+        "qrels_rows": {
+          "dev": 27891,
+          "test": 27726
+        },
+        "late_regime_counts": [
+          {
+            "error_regime": "bin_0",
+            "best_model": "AutoARIMA",
+            "disagreement_regime": "bin_0",
+            "n": 74
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "AutoARIMA",
+            "disagreement_regime": "bin_1",
+            "n": 43
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "AutoETS",
+            "disagreement_regime": "bin_0",
+            "n": 34
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "AutoETS",
+            "disagreement_regime": "bin_1",
+            "n": 19
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "LGBM",
+            "disagreement_regime": "bin_0",
+            "n": 44
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "LGBM",
+            "disagreement_regime": "bin_1",
+            "n": 19
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "XGB",
+            "disagreement_regime": "bin_0",
+            "n": 62
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "XGB",
+            "disagreement_regime": "bin_1",
+            "n": 29
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "AutoARIMA",
+            "disagreement_regime": "bin_0",
+            "n": 29
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "AutoARIMA",
+            "disagreement_regime": "bin_1",
+            "n": 60
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "AutoETS",
+            "disagreement_regime": "bin_0",
+            "n": 15
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "AutoETS",
+            "disagreement_regime": "bin_1",
+            "n": 47
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "LGBM",
+            "disagreement_regime": "bin_0",
+            "n": 38
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "LGBM",
+            "disagreement_regime": "bin_1",
+            "n": 63
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "XGB",
+            "disagreement_regime": "bin_0",
+            "n": 30
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "XGB",
+            "disagreement_regime": "bin_1",
+            "n": 39
+          }
+        ],
+        "fusion": {
+          "system": "pattern_raw_cosine+pattern_tsfel",
+          "weights": {
+            "pattern_raw_cosine": 0.30000000000000004,
+            "pattern_tsfel": 0.7
+          }
+        },
+        "metrics": {
+          "dev": [
+            {
+              "system": "pattern_raw_cosine+pattern_tsfel",
+              "n_queries": 129,
+              "p@10": 0.7085271317829458,
+              "ap@10": 0.027794228211012604,
+              "ndcg@10": 0.3503685765926541,
+              "p@15": 0.7064599483204134,
+              "ap@15": 0.040375665483752696,
+              "ndcg@15": 0.3453674376841776
+            },
+            {
+              "system": "pattern_tsfel",
+              "n_queries": 129,
+              "p@10": 0.7085271317829458,
+              "ap@10": 0.027686343239622414,
+              "ndcg@10": 0.33729004677672186,
+              "p@15": 0.7054263565891473,
+              "ap@15": 0.040319404654834454,
+              "ndcg@15": 0.3370192309787792
+            },
+            {
+              "system": "pattern_raw_cosine",
+              "n_queries": 129,
+              "p@10": 0.6410852713178293,
+              "ap@10": 0.0233961121952344,
+              "ndcg@10": 0.2972871324356027,
+              "p@15": 0.6351421188630492,
+              "ap@15": 0.033673412924986545,
+              "ndcg@15": 0.29309486133560725
+            },
+            {
+              "system": "pattern_raw_dtw",
+              "n_queries": 129,
+              "p@10": 0.6255813953488372,
+              "ap@10": 0.022319184553601292,
+              "ndcg@10": 0.2939004049766036,
+              "p@15": 0.6310077519379845,
+              "ap@15": 0.032610177415349294,
+              "ndcg@15": 0.2934354516173236
+            },
+            {
+              "system": "random",
+              "n_queries": 129,
+              "p@10": 0.5604651162790697,
+              "ap@10": 0.017875585423593653,
+              "ndcg@10": 0.2244587075645159,
+              "p@15": 0.552454780361757,
+              "ap@15": 0.025110169482490986,
+              "ndcg@15": 0.22401168178637854
+            }
+          ],
+          "test": [
+            {
+              "system": "pattern_tsfel",
+              "n_queries": 129,
+              "p@10": 0.7356589147286822,
+              "ap@10": 0.029063545359520344,
+              "ndcg@10": 0.3704165512359884,
+              "p@15": 0.7229974160206719,
+              "ap@15": 0.04195622129278242,
+              "ndcg@15": 0.3584094990238528
+            },
+            {
+              "system": "pattern_raw_cosine+pattern_tsfel",
+              "n_queries": 129,
+              "p@10": 0.7131782945736435,
+              "ap@10": 0.028148588316103004,
+              "ndcg@10": 0.35549964421819036,
+              "p@15": 0.7038759689922481,
+              "ap@15": 0.04045506096953702,
+              "ndcg@15": 0.3455494547391602
+            },
+            {
+              "system": "pattern_raw_dtw",
+              "n_queries": 129,
+              "p@10": 0.6147286821705427,
+              "ap@10": 0.021889572892742588,
+              "ndcg@10": 0.28371402566935755,
+              "p@15": 0.6134366925064599,
+              "ap@15": 0.03153931762981944,
+              "ndcg@15": 0.28572260081584644
+            },
+            {
+              "system": "pattern_raw_cosine",
+              "n_queries": 129,
+              "p@10": 0.5968992248062015,
+              "ap@10": 0.02138681892920192,
+              "ndcg@10": 0.27840228758133606,
+              "p@15": 0.592764857881137,
+              "ap@15": 0.030388711770048055,
+              "ndcg@15": 0.2744189403260261
+            },
+            {
+              "system": "random",
+              "n_queries": 129,
+              "p@10": 0.5666666666666667,
+              "ap@10": 0.018237227672246118,
+              "ndcg@10": 0.2515974079804166,
+              "p@15": 0.5612403100775192,
+              "ap@15": 0.0259340055286927,
+              "ndcg@15": 0.2455947251460196
+            }
+          ]
+        }
+      },
+      {
+        "length": 24,
+        "pattern_forecast_h": 6,
+        "n_index_patterns": 387,
+        "n_dev_patterns": 129,
+        "n_test_patterns": 129,
+        "qrels_rows": {
+          "dev": 27584,
+          "test": 27441
+        },
+        "late_regime_counts": [
+          {
+            "error_regime": "bin_0",
+            "best_model": "AutoARIMA",
+            "disagreement_regime": "bin_0",
+            "n": 60
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "AutoARIMA",
+            "disagreement_regime": "bin_1",
+            "n": 30
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "AutoETS",
+            "disagreement_regime": "bin_0",
+            "n": 72
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "AutoETS",
+            "disagreement_regime": "bin_1",
+            "n": 29
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "LGBM",
+            "disagreement_regime": "bin_0",
+            "n": 57
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "LGBM",
+            "disagreement_regime": "bin_1",
+            "n": 22
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "XGB",
+            "disagreement_regime": "bin_0",
+            "n": 44
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "XGB",
+            "disagreement_regime": "bin_1",
+            "n": 10
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "AutoARIMA",
+            "disagreement_regime": "bin_0",
+            "n": 20
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "AutoARIMA",
+            "disagreement_regime": "bin_1",
+            "n": 62
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "AutoETS",
+            "disagreement_regime": "bin_0",
+            "n": 29
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "AutoETS",
+            "disagreement_regime": "bin_1",
+            "n": 76
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "LGBM",
+            "disagreement_regime": "bin_0",
+            "n": 21
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "LGBM",
+            "disagreement_regime": "bin_1",
+            "n": 50
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "XGB",
+            "disagreement_regime": "bin_0",
+            "n": 16
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "XGB",
+            "disagreement_regime": "bin_1",
+            "n": 47
+          }
+        ],
+        "fusion": {
+          "system": "pattern_raw_cosine+pattern_tsfel",
+          "weights": {
+            "pattern_raw_cosine": 0.6000000000000001,
+            "pattern_tsfel": 0.3999999999999999
+          }
+        },
+        "metrics": {
+          "dev": [
+            {
+              "system": "pattern_raw_cosine+pattern_tsfel",
+              "n_queries": 129,
+              "p@10": 0.6620155038759691,
+              "ap@10": 0.025503054538561304,
+              "ndcg@10": 0.3507804250180193,
+              "p@15": 0.6589147286821705,
+              "ap@15": 0.0367552974450229,
+              "ndcg@15": 0.34136873777924603
+            },
+            {
+              "system": "pattern_tsfel",
+              "n_queries": 129,
+              "p@10": 0.6666666666666666,
+              "ap@10": 0.025998728176081263,
+              "ndcg@10": 0.3383944114210469,
+              "p@15": 0.655813953488372,
+              "ap@15": 0.03706120627881205,
+              "ndcg@15": 0.3311023270937016
+            },
+            {
+              "system": "pattern_raw_dtw",
+              "n_queries": 129,
+              "p@10": 0.6085271317829457,
+              "ap@10": 0.021542434444449685,
+              "ndcg@10": 0.30262904252772044,
+              "p@15": 0.6160206718346254,
+              "ap@15": 0.031173318494295315,
+              "ndcg@15": 0.3044409163824066
+            },
+            {
+              "system": "pattern_raw_cosine",
+              "n_queries": 129,
+              "p@10": 0.596124031007752,
+              "ap@10": 0.020197285711552163,
+              "ndcg@10": 0.2818069634223548,
+              "p@15": 0.5943152454780362,
+              "ap@15": 0.029229000918104542,
+              "ndcg@15": 0.2798602813571967
+            },
+            {
+              "system": "random",
+              "n_queries": 129,
+              "p@10": 0.5372093023255814,
+              "ap@10": 0.01690806830353073,
+              "ndcg@10": 0.2243202558195878,
+              "p@15": 0.5410852713178296,
+              "ap@15": 0.024237210902214684,
+              "ndcg@15": 0.23225961605862364
+            }
+          ],
+          "test": [
+            {
+              "system": "pattern_tsfel",
+              "n_queries": 129,
+              "p@10": 0.6930232558139535,
+              "ap@10": 0.026990667339639174,
+              "ndcg@10": 0.3564408826049116,
+              "p@15": 0.6837209302325582,
+              "ap@15": 0.03881220496343595,
+              "ndcg@15": 0.3511490156825838
+            },
+            {
+              "system": "pattern_raw_cosine+pattern_tsfel",
+              "n_queries": 129,
+              "p@10": 0.6837209302325581,
+              "ap@10": 0.026554259306769575,
+              "ndcg@10": 0.3560419336836018,
+              "p@15": 0.6677002583979329,
+              "ap@15": 0.037694805929868416,
+              "ndcg@15": 0.3477077495039148
+            },
+            {
+              "system": "pattern_raw_dtw",
+              "n_queries": 129,
+              "p@10": 0.6031007751937986,
+              "ap@10": 0.022164781437677947,
+              "ndcg@10": 0.3155157376015612,
+              "p@15": 0.5968992248062015,
+              "ap@15": 0.031149842992638593,
+              "ndcg@15": 0.30397365566520373
+            },
+            {
+              "system": "pattern_raw_cosine",
+              "n_queries": 129,
+              "p@10": 0.5899224806201551,
+              "ap@10": 0.021270328230982086,
+              "ndcg@10": 0.2999015111990644,
+              "p@15": 0.59328165374677,
+              "ap@15": 0.030518518066166973,
+              "ndcg@15": 0.2980671922819356
+            },
+            {
+              "system": "random",
+              "n_queries": 129,
+              "p@10": 0.5542635658914727,
+              "ap@10": 0.01854164999057517,
+              "ndcg@10": 0.23333561193918934,
+              "p@15": 0.5395348837209302,
+              "ap@15": 0.025487064302101032,
+              "ndcg@15": 0.23288500791106168
+            }
+          ]
+        }
+      },
+      {
+        "length": 36,
+        "pattern_forecast_h": 6,
+        "n_index_patterns": 387,
+        "n_dev_patterns": 129,
+        "n_test_patterns": 129,
+        "qrels_rows": {
+          "dev": 27632,
+          "test": 27566
+        },
+        "late_regime_counts": [
+          {
+            "error_regime": "bin_0",
+            "best_model": "AutoARIMA",
+            "disagreement_regime": "bin_0",
+            "n": 83
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "AutoARIMA",
+            "disagreement_regime": "bin_1",
+            "n": 23
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "AutoETS",
+            "disagreement_regime": "bin_0",
+            "n": 102
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "AutoETS",
+            "disagreement_regime": "bin_1",
+            "n": 32
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "LGBM",
+            "disagreement_regime": "bin_0",
+            "n": 35
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "LGBM",
+            "disagreement_regime": "bin_1",
+            "n": 11
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "XGB",
+            "disagreement_regime": "bin_0",
+            "n": 37
+          },
+          {
+            "error_regime": "bin_0",
+            "best_model": "XGB",
+            "disagreement_regime": "bin_1",
+            "n": 9
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "AutoARIMA",
+            "disagreement_regime": "bin_0",
+            "n": 28
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "AutoARIMA",
+            "disagreement_regime": "bin_1",
+            "n": 84
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "AutoETS",
+            "disagreement_regime": "bin_0",
+            "n": 25
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "AutoETS",
+            "disagreement_regime": "bin_1",
+            "n": 63
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "LGBM",
+            "disagreement_regime": "bin_0",
+            "n": 17
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "LGBM",
+            "disagreement_regime": "bin_1",
+            "n": 38
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "XGB",
+            "disagreement_regime": "bin_0",
+            "n": 15
+          },
+          {
+            "error_regime": "bin_1",
+            "best_model": "XGB",
+            "disagreement_regime": "bin_1",
+            "n": 43
+          }
+        ],
+        "fusion": {
+          "system": "pattern_raw_cosine+pattern_tsfel",
+          "weights": {
+            "pattern_raw_cosine": 0.4,
+            "pattern_tsfel": 0.6
+          }
+        },
+        "metrics": {
+          "dev": [
+            {
+              "system": "pattern_raw_cosine+pattern_tsfel",
+              "n_queries": 129,
+              "p@10": 0.7372093023255814,
+              "ap@10": 0.030011152989909737,
+              "ndcg@10": 0.39206882859573405,
+              "p@15": 0.7291989664082688,
+              "ap@15": 0.043563960539154886,
+              "ndcg@15": 0.39052760944000425
+            },
+            {
+              "system": "pattern_tsfel",
+              "n_queries": 129,
+              "p@10": 0.7410852713178294,
+              "ap@10": 0.030287518247480716,
+              "ndcg@10": 0.38847613729427866,
+              "p@15": 0.7297157622739018,
+              "ap@15": 0.04389184049658738,
+              "ndcg@15": 0.3884534389533013
+            },
+            {
+              "system": "pattern_raw_dtw",
+              "n_queries": 129,
+              "p@10": 0.6480620155038759,
+              "ap@10": 0.024641133850639454,
+              "ndcg@10": 0.3369914201293292,
+              "p@15": 0.6341085271317829,
+              "ap@15": 0.03467921130504675,
+              "ndcg@15": 0.3324212968148936
+            },
+            {
+              "system": "pattern_raw_cosine",
+              "n_queries": 129,
+              "p@10": 0.6162790697674417,
+              "ap@10": 0.023022623852174455,
+              "ndcg@10": 0.3103070766787519,
+              "p@15": 0.6103359173126613,
+              "ap@15": 0.032768431469693424,
+              "ndcg@15": 0.3083458868001714
+            },
+            {
+              "system": "random",
+              "n_queries": 129,
+              "p@10": 0.5472868217054263,
+              "ap@10": 0.017613049830650616,
+              "ndcg@10": 0.2433171428091061,
+              "p@15": 0.5498708010335918,
+              "ap@15": 0.025071141799379193,
+              "ndcg@15": 0.25003183884270036
+            }
+          ],
+          "test": [
+            {
+              "system": "pattern_tsfel",
+              "n_queries": 129,
+              "p@10": 0.7186046511627908,
+              "ap@10": 0.02945530834439204,
+              "ndcg@10": 0.38114089062065615,
+              "p@15": 0.7069767441860465,
+              "ap@15": 0.04235668909488946,
+              "ndcg@15": 0.37567070753834003
+            },
+            {
+              "system": "pattern_raw_cosine+pattern_tsfel",
+              "n_queries": 129,
+              "p@10": 0.7170542635658915,
+              "ap@10": 0.028957001195660876,
+              "ndcg@10": 0.37133943429318494,
+              "p@15": 0.7069767441860465,
+              "ap@15": 0.041549575838466565,
+              "ndcg@15": 0.370964000089939
+            },
+            {
+              "system": "pattern_raw_cosine",
+              "n_queries": 129,
+              "p@10": 0.6217054263565892,
+              "ap@10": 0.022679907049251907,
+              "ndcg@10": 0.31364440460320236,
+              "p@15": 0.6222222222222222,
+              "ap@15": 0.032910747879996184,
+              "ndcg@15": 0.3171508646578533
+            },
+            {
+              "system": "pattern_raw_dtw",
+              "n_queries": 129,
+              "p@10": 0.6217054263565891,
+              "ap@10": 0.023102758272084654,
+              "ndcg@10": 0.31278372734617277,
+              "p@15": 0.6222222222222223,
+              "ap@15": 0.033288274143726454,
+              "ndcg@15": 0.31712609805423725
+            },
+            {
+              "system": "random",
+              "n_queries": 129,
+              "p@10": 0.5542635658914729,
+              "ap@10": 0.01778065594964296,
+              "ndcg@10": 0.25148050562537266,
+              "p@15": 0.5555555555555555,
+              "ap@15": 0.02559535155706101,
+              "ndcg@15": 0.25781310853145223
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "ir_diagnostics": {
+    "query_metrics_test": "results_ri_bins_sensitivity/yearly/freqyearly__bins2__h6__seed42__pps1__regfull/ir_query_metrics_test.csv",
+    "qrels_summary": "results_ri_bins_sensitivity/yearly/freqyearly__bins2__h6__seed42__pps1__regfull/ir_qrels_summary.csv",
+    "system_uncertainty": "results_ri_bins_sensitivity/yearly/freqyearly__bins2__h6__seed42__pps1__regfull/ir_system_uncertainty.csv",
+    "pairwise_random_tests": "results_ri_bins_sensitivity/yearly/freqyearly__bins2__h6__seed42__pps1__regfull/ir_pairwise_random_tests.csv",
+    "query_delta_plot": "results_ri_bins_sensitivity/yearly/freqyearly__bins2__h6__seed42__pps1__regfull/fig_query_ndcg10_delta_vs_random.png"
+  },
+  "plots": {
+    "query_delta_vs_random": "results_ri_bins_sensitivity/yearly/freqyearly__bins2__h6__seed42__pps1__regfull/fig_query_ndcg10_delta_vs_random.png"
+  }
+}
