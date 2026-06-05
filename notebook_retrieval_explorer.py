@@ -46,7 +46,14 @@ def launch_explorer(
     """Create and display the notebook retrieval explorer."""
     explorer = RetrievalNotebookExplorer(data_csv=data_csv, results_dir=results_dir)
     _ACTIVE_EXPLORERS.append(explorer)
-    return explorer.show(top_k=top_k)
+    ui = explorer.show(top_k=top_k)
+    try:
+        from IPython.display import display
+
+        display(ui)
+    except Exception:
+        return ui
+    return None
 
 
 def export_qualitative_example(
@@ -104,6 +111,12 @@ class RetrievalNotebookExplorer:
     def __init__(self, data_csv: str | Path, results_dir: str | Path):
         self.data_csv = Path(data_csv)
         self.results_dir = Path(results_dir)
+        if not self.data_csv.exists():
+            raise FileNotFoundError(f"Data CSV does not exist: {self.data_csv}")
+        if not self.results_dir.exists():
+            raise FileNotFoundError(
+                f"Results directory does not exist: {self.results_dir}"
+            )
         self.report = self._load_report()
         self.params = self.report.get("base_configuration", {}).get("parameters", {})
         self.forecast_h = int(self.params.get("forecast_h", 6))
@@ -142,6 +155,7 @@ class RetrievalNotebookExplorer:
             ],
         ] = {}
         self._saved_rankings = self._discover_saved_rankings()
+        self._tsfel_import_error: str | None = None
 
     def show(self, top_k: int = 10) -> Any:
         try:
@@ -153,18 +167,21 @@ class RetrievalNotebookExplorer:
 
         task = widgets.Dropdown(
             options=[("Pattern objects", PATTERN_TASK), ("Whole series", WHOLE_TASK)],
-            value=PATTERN_TASK,
+            value=WHOLE_TASK,
             description="Task",
             layout=widgets.Layout(width="310px"),
         )
         query_split = "test"
+        default_pattern_len = (
+            24
+            if 24 in self.pattern_lens
+            else self.pattern_len
+            if self.pattern_len in self.pattern_lens
+            else self.pattern_lens[0]
+        )
         pattern_len = widgets.Dropdown(
             options=self.pattern_lens,
-            value=(
-                self.pattern_len
-                if self.pattern_len in self.pattern_lens
-                else self.pattern_lens[0]
-            ),
+            value=default_pattern_len,
             description="Pattern L",
             layout=widgets.Layout(width="310px"),
         )
@@ -221,8 +238,9 @@ class RetrievalNotebookExplorer:
             systems = self.available_systems(task.value, length, query_split)
             system.options = systems
             if systems:
+                preferred_system = self._preferred_system(task.value, systems)
                 system.value = (
-                    previous_system if previous_system in systems else systems[0]
+                    previous_system if previous_system in systems else preferred_system
                 )
             queries = self.query_ids(task.value, query_split, length)
             query.options = queries
@@ -233,11 +251,14 @@ class RetrievalNotebookExplorer:
             else:
                 query.value = ""
             index_count = len(self._index_object_ids(task.value, length))
+            tsfel_note = self._tsfel_status_note(task.value, length)
+            tsfel_html = f" {tsfel_note}" if tsfel_note else ""
             status.value = (
                 f"<span class='retrieval-secondary' style='font-size: 12px;'>"
                 f"{len(queries)} selectable <b>test</b> query objects; "
                 f"retrieval ranks against <b>{index_count}</b> indexed candidates. "
                 f"Press <b>Run</b> to compute."
+                f"{tsfel_html}"
                 f"</span>"
             )
 
@@ -355,6 +376,10 @@ class RetrievalNotebookExplorer:
         systems += self._saved_systems(task, length)
         return list(dict.fromkeys(systems))
 
+    def _preferred_system(self, task: str, systems: list[str]) -> str:
+        preferred = "tsfel" if task == WHOLE_TASK else "pattern_raw_cosine"
+        return preferred if preferred in systems else systems[0]
+
     def query_ids(
         self, task: str, split: str, pattern_len: int | None = None
     ) -> list[str]:
@@ -458,42 +483,56 @@ class RetrievalNotebookExplorer:
 
     def _topk_diagnostic_markdown(self, result: RetrievalResult, top_k: int) -> str:
         top = result.ranking.head(top_k).copy()
-        if top.empty or "relevance" not in top.columns:
+        base = (
+            "**How to read this run**  \n"
+            "`score` is the retrieval similarity used for ranking. `relevance` is the "
+            "held-out late-window forecasting-regime match used after ranking."
+        )
+        if top.empty:
+            return f"{base} No ranking rows were returned."
+        if "relevance" not in top.columns or pd.to_numeric(
+            top["relevance"], errors="coerce"
+        ).isna().all():
             return (
-                "**How to read this run**  \n"
-                "`score` is the retrieval similarity used for ranking. `relevance` is the late-window "
-                "forecasting-regime match used only for evaluation."
+                f"{base} No qrels were found for this task/split, so relevance "
+                "diagnostics are unavailable."
             )
 
         rel = pd.to_numeric(top["relevance"], errors="coerce").fillna(0)
         relevant = int((rel > 0).sum())
         strong = int((rel >= 3).sum())
         mean_rel = float(rel.mean()) if len(rel) else 0.0
-        best_idx = int(rel.idxmax()) if len(rel) else -1
+        best_idx = int(rel.idxmax()) if len(rel) and rel.max() > 0 else -1
         best_rank = int(top.loc[best_idx, "rank"]) if best_idx in top.index else None
         best_rel = int(rel.max()) if len(rel) else 0
         query = self._query_display_row(result)
+        regime_values = [
+            query.get("error_regime"),
+            query.get("best_model"),
+            query.get("disagreement_regime"),
+        ]
+        has_regime = all(pd.notna(value) for value in regime_values)
         query_regime = (
-            f"{query.get('error_regime', '?')} error, "
-            f"{query.get('best_model', '?')} best model, "
-            f"{query.get('disagreement_regime', '?')} disagreement"
+            f"`{regime_values[0]}` error, `{regime_values[1]}` best model, "
+            f"`{regime_values[2]}` disagreement"
+            if has_regime
+            else "unavailable because no regime row was found for this query"
         )
         best_text = (
             f"best relevance is `{best_rel}` at rank `{best_rank}`"
             if best_rank is not None
-            else "no relevance labels were found"
+            else "no positive relevance labels appear in the displayed top-k"
         )
         return (
-            "**How to read this run**  \n"
-            f"The query's late forecasting regime is `{query_regime}`. "
-            "`score` is the retrieval similarity used to sort the table; it does not use qrels. "
-            "`relevance` is the held-out late-window forecasting-regime match used after ranking.  \n"
+            f"{base} `score` does not use qrels.  \n"
+            f"The query's late forecasting regime is {query_regime}.  \n"
             f"Top-{len(top)} diagnostic: `{relevant}` have relevance > 0, `{strong}` have relevance >= 3, "
             f"mean relevance is `{mean_rel:.2f}`, and {best_text}."
         )
 
     def plot_result(self, result: RetrievalResult, top_k: int = 10) -> None:
         import matplotlib.pyplot as plt
+        from IPython.display import display
 
         top = result.ranking.head(top_k)
         if top.empty:
@@ -505,6 +544,8 @@ class RetrievalNotebookExplorer:
         self._plot_normalized_overlay(axes[1], result, top)
         self._plot_score_table(axes[2], top)
         fig.tight_layout()
+        display(fig)
+        plt.close(fig)
 
     def export_paper_figure(
         self,
@@ -664,7 +705,6 @@ class RetrievalNotebookExplorer:
             f"{getter('best_model', '?')} / "
             f"{getter('disagreement_regime', '?')}"
         )
-        plt.show()
 
     def _plot_score_table(self, ax: Any, top: pd.DataFrame) -> None:
         ax.axis("off")
@@ -811,6 +851,11 @@ class RetrievalNotebookExplorer:
         task: str,
         length: int | None,
     ) -> dict[str, float]:
+        if not self._ensure_tsfel_available():
+            raise RuntimeError(
+                "TSFEL is required to compute query features for this retrieval "
+                f"system. Install tsfel in the active notebook kernel. {self._tsfel_import_error or ''}"
+            )
         raw, scaler = self._index_tsfel(task, length)
         feature_cols = [c for c in raw.columns if c != "unique_id"]
         idx_scaled = scaler.transform(raw[feature_cols].to_numpy(dtype=float))
@@ -1079,7 +1124,35 @@ class RetrievalNotebookExplorer:
         return bool(path and path.exists())
 
     def _has_tsfel(self, task: str, length: int | None) -> bool:
-        return research.tsfel is not None and self._tsfel_path(task, length) is not None
+        saved_systems = self._saved_systems(task, length)
+        if any("tsfel" in system for system in saved_systems):
+            return True
+        return (
+            self._tsfel_path(task, length) is not None
+            and self._ensure_tsfel_available()
+        )
+
+    def _ensure_tsfel_available(self) -> bool:
+        if research.tsfel is not None:
+            self._tsfel_import_error = None
+            return True
+        try:
+            import tsfel as tsfel_module
+        except Exception as exc:
+            self._tsfel_import_error = f"{type(exc).__name__}: {exc}"
+            return False
+        research.tsfel = tsfel_module
+        self._tsfel_import_error = None
+        return True
+
+    def _tsfel_status_note(self, task: str, length: int | None) -> str:
+        if any("tsfel" in system for system in self._saved_systems(task, length)):
+            return ""
+        if self._tsfel_path(task, length) is None:
+            return "TSFEL systems hidden: no saved index TSFEL artifact for this task."
+        if not self._ensure_tsfel_available():
+            return "TSFEL systems hidden: install `tsfel` in this notebook kernel."
+        return ""
 
     def _task_prefix(self, task: str, length: int | None = None) -> str:
         if task == WHOLE_TASK:
