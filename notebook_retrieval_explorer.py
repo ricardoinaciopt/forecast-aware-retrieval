@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import contextlib
+import html
+import io
 import json
 import re
 from dataclasses import dataclass
@@ -227,6 +230,18 @@ class RetrievalNotebookExplorer:
             .retrieval-explorer .widget-readout {
                 color: #c65f00 !important;
             }
+            .retrieval-explorer .retrieval-diagnostic {
+                color: #24292f !important;
+                font-size: 14px;
+                line-height: 1.45;
+            }
+            .retrieval-explorer .retrieval-label {
+                font-weight: 600;
+            }
+            .retrieval-explorer .retrieval-value {
+                color: #111827 !important;
+                font-weight: 600;
+            }
             </style>
             """
         )
@@ -434,11 +449,8 @@ class RetrievalNotebookExplorer:
         )
 
     def display_result(self, result: RetrievalResult, top_k: int = 10) -> None:
-        from IPython.display import Markdown, display
+        from IPython.display import HTML, Markdown, display
 
-        display(Markdown(self._markdown_summary(result)))
-        for step in result.process:
-            print(f"- {step}")
         display_cols = [
             "rank",
             "doc_id",
@@ -457,7 +469,7 @@ class RetrievalNotebookExplorer:
         display(Markdown("**Retrieved index objects**"))
         table = result.ranking.head(top_k).copy()
         display(table[[c for c in display_cols if c in table.columns]])
-        display(Markdown(self._topk_diagnostic_markdown(result, top_k=top_k)))
+        display(HTML(self._topk_diagnostic_html(result, top_k=top_k)))
         self.plot_result(result, top_k=top_k)
 
     def _query_display_row(self, result: RetrievalResult) -> dict[str, Any]:
@@ -481,21 +493,20 @@ class RetrievalNotebookExplorer:
                         row[col] = first[col]
         return row
 
-    def _topk_diagnostic_markdown(self, result: RetrievalResult, top_k: int) -> str:
+    def _topk_diagnostic_html(self, result: RetrievalResult, top_k: int) -> str:
         top = result.ranking.head(top_k).copy()
-        base = (
-            "**How to read this run**  \n"
-            "`score` is the retrieval similarity used for ranking. `relevance` is the "
-            "held-out late-window forecasting-regime match used after ranking."
-        )
+
+        def fmt_value(text: Any) -> str:
+            return f"<span class='retrieval-value'>{html.escape(str(text))}</span>"
+
         if top.empty:
-            return f"{base} No ranking rows were returned."
+            return "<div class='retrieval-diagnostic'>No ranking rows were returned.</div>"
         if "relevance" not in top.columns or pd.to_numeric(
             top["relevance"], errors="coerce"
         ).isna().all():
             return (
-                f"{base} No qrels were found for this task/split, so relevance "
-                "diagnostics are unavailable."
+                "<div class='retrieval-diagnostic'>No qrels were found for this "
+                "task/split, so relevance diagnostics are unavailable.</div>"
             )
 
         rel = pd.to_numeric(top["relevance"], errors="coerce").fillna(0)
@@ -513,21 +524,24 @@ class RetrievalNotebookExplorer:
         ]
         has_regime = all(pd.notna(value) for value in regime_values)
         query_regime = (
-            f"`{regime_values[0]}` error, `{regime_values[1]}` best model, "
-            f"`{regime_values[2]}` disagreement"
+            f"{fmt_value(regime_values[0])} error, "
+            f"{fmt_value(regime_values[1])} best model, "
+            f"{fmt_value(regime_values[2])} disagreement"
             if has_regime
             else "unavailable because no regime row was found for this query"
         )
         best_text = (
-            f"best relevance is `{best_rel}` at rank `{best_rank}`"
+            f"best relevance is {fmt_value(best_rel)} at rank {fmt_value(best_rank)}"
             if best_rank is not None
             else "no positive relevance labels appear in the displayed top-k"
         )
         return (
-            f"{base} `score` does not use qrels.  \n"
-            f"The query's late forecasting regime is {query_regime}.  \n"
-            f"Top-{len(top)} diagnostic: `{relevant}` have relevance > 0, `{strong}` have relevance >= 3, "
-            f"mean relevance is `{mean_rel:.2f}`, and {best_text}."
+            "<div class='retrieval-diagnostic'>"
+            f"The query's late forecasting regime is {query_regime}.<br>"
+            f"Top-{len(top)} diagnostic: {fmt_value(relevant)} have relevance &gt; 0, "
+            f"{fmt_value(strong)} have relevance &gt;= 3, mean relevance is "
+            f"{fmt_value(f'{mean_rel:.2f}')}, and {best_text}."
+            "</div>"
         )
 
     def plot_result(self, result: RetrievalResult, top_k: int = 10) -> None:
@@ -862,9 +876,12 @@ class RetrievalNotebookExplorer:
         idx_feats = {
             uid: idx_scaled[i] for i, uid in enumerate(raw["unique_id"].astype(str))
         }
-        q_raw = research.extract_tsfel_features(
-            {query_id: query_values}, self.tsfel_standardize_series
-        )
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(
+            io.StringIO()
+        ):
+            q_raw = research.extract_tsfel_features(
+                {query_id: query_values}, self.tsfel_standardize_series
+            )
         for col in feature_cols:
             if col not in q_raw.columns:
                 q_raw[col] = 0.0
@@ -1013,19 +1030,6 @@ class RetrievalNotebookExplorer:
         ax.set_xlabel("resampled step")
         ax.grid(alpha=0.2)
         ax.legend(fontsize=7, loc="best")
-
-    def _markdown_summary(self, result: RetrievalResult) -> str:
-        warning = "\n\nRetrieval uses only pre-holdout visible data."
-        length = (
-            f", pattern length `{result.pattern_len}`" if result.pattern_len else ""
-        )
-        return (
-            f"**Query:** `{result.query_id}`  \n"
-            f"**Task:** `{result.task}`{length}  \n"
-            f"**System:** `{result.system}`  \n"
-            f"**Split:** `{result.split}`"
-            f"{warning}"
-        )
 
     def _process_description(self, system: str, task: str) -> list[str]:
         if "dtw" in system and "+" not in system:
